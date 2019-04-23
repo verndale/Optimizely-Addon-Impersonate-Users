@@ -1,0 +1,15 @@
+﻿<configuration>
+  <location path="EPiServer/Verndale.ImpersonateUsers/RevertImpersonation">
+    <system.web>
+      <authorization>
+        <allow users="*"/>
+      </authorization>
+    </system.web>
+  </location>
+
+  <episerver.shell>
+    <protectedModules>
+      <add name="Verndale.ImpersonateUsers" />
+    </protectedModules>
+  </episerver.shell>
+</configuration>

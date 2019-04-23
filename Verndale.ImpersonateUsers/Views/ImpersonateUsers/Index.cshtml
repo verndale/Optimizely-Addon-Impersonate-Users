@@ -1,0 +1,167 @@
+﻿@inherits System.Web.Mvc.WebViewPage<Verndale.ImpersonateUsers.Models.ImpersonateUserViewModel>
+@using System.Web.Mvc.Html
+@using EPiServer.Shell.Security
+@using System.Web.Mvc
+@using EPiServer.Framework.Web.Mvc.Html
+
+@{
+    Layout = null;
+}
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+    <title>
+        Impersonate Users
+    </title>
+    <!-- Mimic Internet Explorer 7 -->
+    <meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7">
+    <link href="../../../App_Themes/Default/Styles/system.css" type="text/css" rel="stylesheet">
+    <link href="../../../App_Themes/Default/Styles/ToolButton.css" type="text/css" rel="stylesheet">
+
+    @Html.CssLink(EPiServer.Shell.Paths.ToClientResource("Shell", "ClientResources/epi/themes/legacy/ShellCore.css"))
+    @Html.CssLink(EPiServer.Shell.Paths.ToClientResource("Shell", "ClientResources/epi/themes/legacy/ShellCoreLightTheme.css"))
+    @Html.ScriptResource(EPiServer.Shell.Paths.ToClientResource("CMS", "ClientResources/ReportCenter/ReportCenter.js"))
+    @Html.ScriptResource(EPiServer.Shell.Paths.ToClientResource("Shell", "ClientResources/ShellCore.js"))
+</head>
+<body id="body">
+
+    @using (Html.BeginForm("IndexPost", "ImpersonateUsers", FormMethod.Post, new { id = "userForm" }))
+    {
+        <script src="/Util/javascript/episerverscriptmanager.js" type="text/javascript"></script>
+        <script src="/EPiServer/CMS/javascript/system.js" type="text/javascript"></script>
+        <script src="/EPiServer/CMS/javascript/dialog.js" type="text/javascript"></script>
+        <script src="/EPiServer/CMS/javascript/system.aspx" type="text/javascript">
+        </script>
+
+        @Html.Hidden("pageIndex", Model.PageIndex)
+
+        <div class="epi-contentContainer epi-padding">
+            <div class="epi-contentArea">
+                <h1 class="EP-prefix">
+                    Impersonate Users
+                </h1>
+
+                @if (!string.IsNullOrEmpty(Model.Message))
+                {
+                    <div id="FullRegion_ValidationSummary" class="EP-validationSummary" style="color: Black;">
+                        <ul>
+                            <li>@Model.Message</li>
+                        </ul>
+                    </div>
+                }
+            </div>
+
+            <div id="FullRegion_MainRegion_SearchDiv" class="epi-formArea epi-paddingVertical-small">
+                <div class="epi-size15">
+                    <div>
+                        <label for="FullRegion_MainRegion_FirstName">Name</label>
+                        <input name="FirstName" type="text" maxlength="50" id="FullRegion_MainRegion_FirstName" class="episize240" value="@Model.FirstName">
+                    </div>
+
+                    <div id="ToggleRow" style="display: block;">
+                        <label for="FullRegion_MainRegion_Email">E-mail address</label>
+                        <input name="Email" type="text" maxlength="50" id="FullRegion_MainRegion_Email" class="episize240" value="@Model.Email">
+                    </div>
+
+                    <div>
+                        <label for="FullRegion_MainRegion_PagingSize">Number of hits per page</label>
+                        <input name="PagingSize" type="text" value="20" maxlength="50" id="FullRegion_MainRegion_PagingSize" class="episize240" value="@Model.PagingSize">
+                    </div>
+
+                    <div id="FullRegion_MainRegion_ToolButtonDiv" class="epi-indent">
+                        <span class="epi-cmsButton">
+                            <input class="epi-cmsButton-text epi-cmsButton-tools epi-cmsButton-Search" type="submit" name="SearchButton" id="FullRegion_MainRegion_SearchButton" value="Search" title="Search" onmouseover="EPi.ToolButton.MouseDownHandler(this)" onmouseout="EPi.ToolButton.ResetMouseDownHandler(this)">
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+
+            @if (Model?.Users != null)
+            {
+                <div>
+                    <table class="epi-default" cellspacing="0" id="FullRegion_MainRegion_Grid" style="border-style: None; border-collapse: collapse;">
+                        <tbody>
+                            <tr>
+                                <th scope="col">&nbsp;</th>
+                                <th scope="col">Name</th>
+                                <th scope="col">Provider</th>
+                                <th scope="col">E-mail address</th>
+                                <th scope="col">Description</th>
+                                <th align="center" scope="col">Active</th>
+                                <th align="center" scope="col">Locked out</th>
+                                <th scope="col"></th>
+                            </tr>
+
+                            @foreach (IUIUser user in Model.Users)
+                            {
+                                <tr>
+                                    <td>
+                                        <img src="/App_Themes/Default/Images/SecurityTypes/User.gif">
+                                    </td>
+                                    <td>
+                                        @user.Username
+                                    </td>
+                                    <td>@user.ProviderName</td>
+                                    <td>@user.Email</td>
+                                    <td>@user.Comment</td>
+                                    <td align="center">
+                                        @if (user.IsApproved)
+                                        {
+                                            <img src="/App_Themes/Default/Images/Tools/Check.gif">
+                                        }
+                                    </td>
+                                    <td align="center">
+                                        @if (user.IsLockedOut)
+                                        {
+                                            <img src="/App_Themes/Default/Images/Tools/Check.gif">
+                                        }
+                                    </td>
+                                    <td>
+                                        <a href="javascript:;" onclick="document.getElementById('user').value = '@user.Username';document.getElementById('impersonateForm').submit();">
+                                            Impersonate
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                            <tr class="epipager">
+                                <td colspan="8">
+                                    @for (var i = 1; i <= Model.TotalPages; i++)
+                                    {
+                                        if (i == Model.PageIndex + 1)
+                                        {
+                                            <span>@i</span>
+                                        }
+                                        else
+                                        {
+                                            <a href="javascript:;" onclick="document.getElementById('pageIndex').value = '@(i - 1)';document.getElementById('userForm').submit();">@i</a>
+                                        }
+                                        @:&nbsp;
+                                    }
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+        </div>
+
+        <script type="text/javascript">
+            //<![CDATA[
+            EPi.SetupEvents = function () {
+                EPi.AddEventListener(window,
+                    "load",
+                    function (e) { return (EPi.FocusElement("FullRegion_MainRegion_FirstName", true, true)); });
+            }
+                //]]>
+        </script>
+    }
+
+    @using (Html.BeginForm("Impersonate", "ImpersonateUsers", FormMethod.Post, new { id = "impersonateForm", target = "_top" }))
+    {
+        @Html.Hidden("user")
+    }
+
+</body>
+</html>

@@ -37,5 +37,27 @@ namespace Verndale.ImpersonateUsers.Repositories
 
             return originalUsernameClaim.Value;
         }
+
+        public static string GetImpersonatedUsername(this IPrincipal principal)
+        {
+            if (!(principal is ClaimsPrincipal claimsPrincipal))
+            {
+                return string.Empty;
+            }
+
+            if (!claimsPrincipal.IsImpersonating())
+            {
+                return string.Empty;
+            }
+
+            var originalUsernameClaim = claimsPrincipal.Claims.SingleOrDefault(c => c.Type == "ImpersonatedUsername");
+
+            if (originalUsernameClaim == null)
+            {
+                return string.Empty;
+            }
+
+            return originalUsernameClaim.Value;
+        }
     }
 }

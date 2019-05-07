@@ -27,11 +27,12 @@ namespace Verndale.ImpersonateUsers.Repositories
                 userManager.CreateIdentityAsync(impersonatedUser, DefaultAuthenticationTypes.ApplicationCookie).Result;
 
             impersonatedIdentity.AddClaim(new Claim("UserImpersonation", "true"));
-            impersonatedIdentity.AddClaim(new Claim("OriginalUsername", originalUsername));
+			impersonatedIdentity.AddClaim(new Claim("OriginalUsername", originalUsername));
+            impersonatedIdentity.AddClaim(new Claim("ImpersonatedUsername", userName));
 
             var authenticationManager = context.GetOwinContext().Authentication;
             authenticationManager.SignOut(DefaultAuthenticationTypes.ApplicationCookie);
-            authenticationManager.SignIn(new AuthenticationProperties() { IsPersistent = false }, impersonatedIdentity);
+            authenticationManager.SignIn(new AuthenticationProperties { IsPersistent = false }, impersonatedIdentity);
         }
 
         public void RevertImpersonation(UserManager<ApplicationUser, string> userManager)

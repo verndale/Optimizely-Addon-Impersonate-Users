@@ -68,7 +68,23 @@ namespace Verndale.ImpersonateUsers.Controllers
 
             try
             {
-                var signInManager = Request.GetOwinContext().Get<ApplicationSignInManager<ApplicationUser>>();
+                if (Request == null)
+                {
+                    throw new Exception("Request cannot be null");
+                }
+
+                var owinContext = Request.GetOwinContext();
+                if (owinContext == null)
+                {
+                    throw new Exception("No Owin Context.");
+                }
+
+                var signInManager = owinContext.Get<ApplicationSignInManager<ApplicationUser>>();
+                if (signInManager == null)
+                {
+                    throw new Exception("SignInManager could not be retrieved.");
+                }
+
                 var userManager = signInManager.UserManager;
                 var impersonationRepository = ServiceLocator.Current.GetInstance<IImpersonationRepository>();
 

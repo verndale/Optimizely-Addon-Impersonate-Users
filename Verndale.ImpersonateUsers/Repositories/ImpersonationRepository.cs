@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using System.Web;
 using EPiServer.Cms.UI.AspNetIdentity;
+using EPiServer.Logging;
 using EPiServer.ServiceLocation;
 using Microsoft.AspNet.Identity;
 using Microsoft.Owin.Security;
@@ -11,6 +12,12 @@ namespace Verndale.ImpersonateUsers.Repositories
     [ServiceConfiguration(ServiceType = typeof(IImpersonationRepository))]
     public class ImpersonationRepository : IImpersonationRepository
     {
+        #region Properties
+
+        private static readonly ILogger Logger = LogManager.GetLogger();
+
+        #endregion
+
         public void ImpersonateUser(string userName, UserManager<ApplicationUser, string> userManager)
         {
             var context = HttpContext.Current;
@@ -41,7 +48,8 @@ namespace Verndale.ImpersonateUsers.Repositories
 
             if (!HttpContext.Current.User.IsImpersonating())
             {
-                throw new Exception("Unable to remove impersonation because there is no impersonation");
+                Logger.Warning("Unable to remove impersonation because there is no impersonation");
+                return;
             }
 
             var originalUsername = HttpContext.Current.User.GetOriginalUsername();

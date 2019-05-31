@@ -6,6 +6,11 @@ namespace Verndale.ImpersonateUsers.Models
 {
     public class ImpersonateUserViewModel
     {
+        public ImpersonateUserViewModel()
+        {
+            PagingSize = 20;
+        }
+
         public string FirstName { get; set; }
         public string Email { get; set; }
         public int PagingSize { get; set; }

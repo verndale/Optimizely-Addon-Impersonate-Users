@@ -1,5 +1,7 @@
 ﻿using EPiServer.ServiceLocation;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Web;
 using System.Web.Mvc;
 using EPiServer.Cms.UI.AspNetIdentity;
@@ -38,7 +40,7 @@ namespace Verndale.ImpersonateUsers.Controllers
 
             try
             {
-                int totalRecords;
+                int totalRecords = 0;
                 var userProvider = ServiceLocator.Current.GetInstance<UIUserProvider>();
 
                 if (model.Email == null) model.Email = "";
@@ -47,6 +49,27 @@ namespace Verndale.ImpersonateUsers.Controllers
                 model.Users = !string.IsNullOrEmpty(model.Email)
                     ? userProvider.FindUsersByEmail(model.Email.Trim().ToLower(), model.PageIndex, model.PagingSize, out totalRecords)
                     : userProvider.FindUsersByName(model.FirstName.Trim().ToLower(), model.PageIndex, model.PagingSize, out totalRecords);
+
+                if (!string.IsNullOrEmpty(model.Email) && !string.IsNullOrEmpty(model.FirstName))
+                {
+                    var usersByName = userProvider.FindUsersByName(model.FirstName.Trim().ToLower(), 0, 1000, out totalRecords);
+                    var usersByEmail = userProvider.FindUsersByEmail(model.Email.Trim().ToLower(), 0, 1000, out totalRecords);
+                    var users = new List<IUIUser>();
+                    
+                    foreach (var user in usersByName)
+                    {
+                        Logger.Debug(user.Username);
+
+                        if (usersByEmail.Any(p => p.Username == user.Username))
+                        {
+                            users.Add(user);
+                        }
+                    }
+
+                    model.Users = users.Skip(model.PagingSize * model.PageIndex).Take(model.PagingSize);
+
+                    totalRecords = model.Users.Count();
+                }
 
                 Logger.Debug($"Total records: {totalRecords}");
 

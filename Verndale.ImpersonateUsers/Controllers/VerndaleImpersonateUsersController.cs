@@ -16,7 +16,7 @@ using PlugInArea = EPiServer.PlugIn.PlugInArea;
 
 namespace Verndale.ImpersonateUsers.Controllers
 {
-    [Authorize(Roles = "Administrators,WebAdmins")]
+    [Authorize(Roles = "Administrators, WebAdmins, ImpersonateUsers")]
     [GuiPlugIn(Area = PlugInArea.AdminMenu, UrlFromModuleFolder = "ImpersonateUsers", DisplayName = "Impersonate Users")]
     public class VerndaleImpersonateUsersController : Controller
     {

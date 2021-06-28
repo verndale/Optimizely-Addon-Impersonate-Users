@@ -6,7 +6,13 @@
       </authorization>
     </system.web>
   </location>
-
+  <episerver.framework>
+    <virtualRoles>
+      <providers>
+        <add name="ImpersonateUsers" type="EPiServer.Security.MappedRole, EPiServer.Framework" roles="" mode="Any" />
+      </providers>
+    </virtualRoles>
+  </episerver.framework>
   <episerver.shell>
     <protectedModules>
       <add name="Verndale.ImpersonateUsers" />

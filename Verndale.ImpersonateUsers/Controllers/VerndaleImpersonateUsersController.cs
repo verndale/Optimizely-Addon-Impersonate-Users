@@ -1,94 +1,70 @@
-﻿using EPiServer.ServiceLocation;
+﻿using EPiServer.Shell;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-using System.Web.Mvc;
-using EPiServer.Cms.UI.AspNetIdentity;
-using EPiServer.Logging;
-using EPiServer.PlugIn;
-using EPiServer.Shell.Security;
-using Microsoft.AspNet.Identity.Owin;
+using System.Threading.Tasks;
 using Verndale.ImpersonateUsers.Models;
-using Verndale.ImpersonateUsers.Repositories;
-using Shell = EPiServer.Shell;
-using PlugInArea = EPiServer.PlugIn.PlugInArea;
+using Verndale.ImpersonateUsers.Services;
 
 namespace Verndale.ImpersonateUsers.Controllers
 {
-    [Authorize(Roles = "Administrators, WebAdmins, ImpersonateUsers")]
-    [GuiPlugIn(Area = PlugInArea.AdminMenu, UrlFromModuleFolder = "ImpersonateUsers", DisplayName = "Impersonate Users")]
+    [Authorize(Policy = Constants.AuthorizationPolicyName)]
     public class VerndaleImpersonateUsersController : Controller
     {
         #region Properties
 
-        private static readonly ILogger Logger = LogManager.GetLogger();
+        private readonly ILogger _logger;
+        private readonly IAuthorizationService _authorizationService;
+        private readonly IImpersonationService _impersonationService;
 
         #endregion
 
-        public ActionResult Index()
+        public VerndaleImpersonateUsersController(
+            ILogger<VerndaleImpersonateUsersController> logger,
+            IAuthorizationService authorizationService,
+            IImpersonationService impersonationService)
         {
-            Logger.Debug("Begin Index()");
-            return View(GetViewLocation("Index"), new ImpersonateUserViewModel());
+            _logger = logger;
+            _authorizationService = authorizationService;
+            _impersonationService = impersonationService;
         }
 
-        [HttpPost]
-        public ActionResult IndexPost(ImpersonateUserViewModel model)
+        [AcceptVerbs("GET", "POST")]
+        public async Task<ActionResult> Index(ImpersonateUserListViewModel model)
         {
-            Logger.Debug("Begin Index(ImpersonateUserViewModel model)");
-            Logger.Debug(
-                $"FirstName: {model.FirstName}, Email: {model.Email}, PageIndex: {model.PageIndex}, PagingSize: {model.PagingSize}");
+            _logger.LogDebug("Begin Index(ImpersonateUserViewModel model)");
+            _logger.LogDebug(
+                "FirstName: {FirstName}, Email: {Email}, PageIndex: {PageIndex}, PagingSize: {PagingSize}",
+                model.FirstName,
+                model.Email,
+                model.PageIndex,
+                model.PagingSize);
 
             try
             {
-                int totalRecords = 0;
-                var userProvider = ServiceLocator.Current.GetInstance<UIUserProvider>();
-
-                if (model.Email == null) model.Email = "";
-                if (model.FirstName == null) model.FirstName = "";
-
-                model.Users = !string.IsNullOrEmpty(model.Email)
-                    ? userProvider.FindUsersByEmail(model.Email.Trim().ToLower(), model.PageIndex, model.PagingSize, out totalRecords)
-                    : userProvider.FindUsersByName(model.FirstName.Trim().ToLower(), model.PageIndex, model.PagingSize, out totalRecords);
-
-                if (!string.IsNullOrEmpty(model.Email) && !string.IsNullOrEmpty(model.FirstName))
-                {
-                    var usersByName = userProvider.FindUsersByName(model.FirstName.Trim().ToLower(), 0, 1000, out totalRecords);
-                    var usersByEmail = userProvider.FindUsersByEmail(model.Email.Trim().ToLower(), 0, 1000, out totalRecords);
-                    var users = new List<IUIUser>();
-                    
-                    foreach (var user in usersByName)
-                    {
-                        Logger.Debug(user.Username);
-
-                        if (usersByEmail.Any(p => p.Username == user.Username))
-                        {
-                            users.Add(user);
-                        }
-                    }
-
-                    model.Users = users.Skip(model.PagingSize * model.PageIndex).Take(model.PagingSize);
-
-                    totalRecords = model.Users.Count();
-                }
-
-                Logger.Debug($"Total records: {totalRecords}");
-
-                model.TotalRecords = totalRecords;
+                var resultSize = Math.Max(model.PageIndex, 1) * model.PagingSize;
+                model.Users = await _impersonationService.FindUsersAsync(resultSize, model.FirstName, model.Email);
             }
             catch (Exception ex)
             {
                 model.Message = ex.Message;
-                Logger.Error(ex.Message, ex);
+                _logger.LogError(ex, ex.Message);
             }
 
-            return View(GetViewLocation("Index"), model);
+            return View(model);
         }
 
-        [HttpPost]
-        public ActionResult Impersonate(string user)
+        [AcceptVerbs("GET", "POST")]
+        [AllowAnonymous]
+        public async Task<ActionResult> Impersonate(ImpersonateUserViewModel model)
         {
-            Logger.Debug("Begin Impersonate(string user)");
+            _logger.LogDebug("Begin Impersonate(ImpersonateUserViewModel model)");
+
+            if (!await IsUserAuthorized())
+            {
+                return Redirect(Paths.ToResource(GetType(), $"{nameof(ImpersonateUsers)}/{nameof(RevertImpersonation)}"));
+            }
 
             try
             {
@@ -97,45 +73,34 @@ namespace Verndale.ImpersonateUsers.Controllers
                     throw new Exception("Request cannot be null");
                 }
 
-                var owinContext = Request.GetOwinContext();
-                if (owinContext == null)
-                {
-                    throw new Exception("No Owin Context.");
-                }
-
-                var signInManager = owinContext.Get<ApplicationSignInManager<ApplicationUser>>();
-                if (signInManager == null)
-                {
-                    throw new Exception("SignInManager could not be retrieved.");
-                }
-
-                var userManager = signInManager.UserManager;
-                var impersonationRepository = ServiceLocator.Current.GetInstance<IImpersonationRepository>();
-
-                impersonationRepository.ImpersonateUser(user, userManager);
+                await _impersonationService.ImpersonateUserAsync(model.UserName);
             }
             catch (Exception ex)
             {
-                Logger.Error(ex.Message, ex);
+                _logger.LogError(ex.Message, ex);
+
                 return Content(ex.Message);
             }
 
-            return View(GetViewLocation("Impersonation"), model: user);
+            return View(model);
         }
 
-        private static string GetViewLocation(string viewName)
+        [AcceptVerbs("GET", "POST")]
+        [AllowAnonymous]
+        public async Task<ActionResult> RevertImpersonation()
         {
-            // Catch null exception in unit testing
-            try
-            {
-                var rootPath = Shell.Paths.ProtectedRootPath;
-            }
-            catch (Exception)
-            {
-                return viewName;
-            }
+            _logger.LogDebug("Begin RevertImpersonation()");
 
-            return $"{Shell.Paths.ProtectedRootPath}Verndale.ImpersonateUsers/Views/ImpersonateUsers/{viewName}.cshtml";
+            await _impersonationService.RevertImpersonationAsync();
+
+            return Redirect(Paths.ToResource(GetType(), nameof(ImpersonateUsers)));
+        }
+
+        private async Task<bool> IsUserAuthorized()
+        {
+            var authResult = await _authorizationService.AuthorizeAsync(User, Constants.AuthorizationPolicyName);
+
+            return authResult.Succeeded;
         }
     }
 }

@@ -1,0 +1,29 @@
+﻿@using EPiServer.Framework.Web.Mvc.Html
+@using EPiServer.Shell
+@using EPiServer.Framework.Web.Resources
+@model Verndale.ImpersonateUsers.Models.ImpersonateUserViewModel
+
+@section AdditionalScripts {
+    <script>
+        function onIFrameLoad(frameElement) {
+            document.getElementById('spinner').classList.add('visually-hidden');
+            frameElement.style.height = `calc(100% - ${frameElement.offsetTop}px`;
+        }
+    </script>
+}
+
+<div style="margin: 0;height: 100vh;overflow-y: hidden;">
+    <div class="position-relative text-center">
+        <span class="alert alert-primary d-block m-2">
+            <i class="bi-info-circle"></i>
+            You are viewing this page as <strong>@Model.UserName</strong> Click <a href="RevertImpersonation" class="alert-link">here</a> to stop impersonating this user.
+        </span>
+    </div>
+
+    <div id="spinner" class="d-flex justify-content-center" style="height: 100%; align-items: center;">
+        <div class="spinner-border" role="status" style="height: 10rem; width: 10rem;">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+    <iframe src="/" frameborder="0" onload="onIFrameLoad(this)" style="width: 100%" />
+</div>
